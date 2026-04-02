@@ -1,12 +1,1183 @@
 <!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>XAU/USD Dashboard</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
-  </body>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>XAU/USD Dashboard</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{background:#07080a;color:#e0e0e0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;min-height:100vh;padding-bottom:80px}
+:root{--gold:#D4AF37;--green:#4CAF50;--red:#EF5350;--blue:#5C9EE8;--orange:#FF9800;--purple:#9C6FE4;--card:#0d0e10;--border:#1a1b1e;--dim:#555;--muted:#888}
+
+/* HEADER */
+.header{background:linear-gradient(180deg,#0f1012 0%,#07080a 100%);border-bottom:1px solid var(--border);padding:14px 16px;position:sticky;top:0;z-index:100}
+.header-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.logo{display:flex;align-items:center;gap:8px}
+.logo-dot{width:8px;height:8px;border-radius:50%;background:var(--gold);box-shadow:0 0 8px var(--gold)}
+.logo-text{color:var(--gold);font-size:18px;font-weight:700;letter-spacing:0.5px}
+.clock{font-family:'Courier New',monospace;font-size:16px;font-weight:700;color:#e0e0e0;text-align:right}
+.clock-sub{font-size:10px;color:var(--dim);text-align:right;margin-top:2px}
+
+/* DAILY BAR */
+.daily-bar{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px}
+.stat-box{background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:8px;padding:7px 10px}
+.stat-label{font-size:9px;color:var(--dim);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:2px}
+.stat-val{font-family:'Courier New',monospace;font-size:15px;font-weight:700}
+.stat-sub{font-size:9px;color:var(--dim);margin-top:1px}
+
+/* WINDOW STRIP */
+.window-strip{display:flex;gap:4px}
+.window-item{flex:1;background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:8px;padding:5px 3px;text-align:center;transition:all 0.3s}
+.window-item.active{border-color:var(--green);background:rgba(76,175,80,0.1)}
+.window-item.tier-a.active{border-color:var(--green)}
+.window-item.tier-b.active{border-color:var(--gold)}
+.window-item.tier-d.active{border-color:var(--orange)}
+.window-emoji{font-size:11px}
+.window-time{font-size:8px;font-family:'Courier New',monospace;color:var(--dim);margin-top:1px}
+.window-tier{font-size:8px;font-weight:700;letter-spacing:0.5px;margin-top:2px}
+
+/* TABS */
+.tabs{display:flex;background:#0a0b0d;border-bottom:1px solid var(--border);overflow-x:auto;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{flex-shrink:0;background:none;border:none;border-bottom:2px solid transparent;color:var(--dim);padding:11px 14px;font-size:11px;font-weight:500;cursor:pointer;letter-spacing:0.3px;white-space:nowrap}
+.tab.active{color:var(--gold);border-bottom-color:var(--gold)}
+
+/* CONTENT */
+.content{padding:16px}
+.tab-panel{display:none;animation:fadeIn 0.25s ease}
+.tab-panel.active{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+
+/* CARDS */
+.card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:12px}
+.card-title{font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:12px}
+.section-title{font-size:14px;font-weight:700;color:var(--gold);margin-bottom:14px}
+
+/* PRICE TICKER */
+.price-card{background:linear-gradient(135deg,#0f1a12,#0a0c0e);border:1px solid rgba(76,175,80,0.3);border-radius:14px;padding:16px;margin-bottom:12px}
+.price-main{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px}
+.price-label{font-size:9px;color:var(--dim);letter-spacing:2px;text-transform:uppercase;margin-bottom:4px}
+.price-big{font-family:'Courier New',monospace;font-size:30px;font-weight:800;color:#e0e0e0;line-height:1}
+.price-change{font-family:'Courier New',monospace;font-size:13px;font-weight:600;margin-top:5px}
+.price-meta{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
+.update-btn{background:rgba(76,175,80,0.12);border:1px solid rgba(76,175,80,0.4);color:var(--green);border-radius:10px;padding:10px 16px;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;white-space:nowrap;flex-shrink:0}
+.update-btn:disabled{opacity:0.5;cursor:not-allowed}
+.range-bar{margin-top:10px}
+.range-labels{display:flex;justify-content:space-between;margin-bottom:4px}
+.range-label{font-size:9px;color:var(--dim)}
+.range-track{background:#1a1a1a;border-radius:4px;height:5px;position:relative;overflow:visible}
+.range-fill{background:linear-gradient(90deg,var(--red),var(--green));height:100%;border-radius:4px;opacity:0.3}
+.range-dot{position:absolute;top:-2px;width:9px;height:9px;border-radius:50%;background:var(--gold);border:2px solid #07080a;transform:translateX(-50%);box-shadow:0 0 6px var(--gold)}
+
+/* LEVELS */
+.level-row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--border)}
+.level-row:last-child{border-bottom:none}
+.level-price{font-family:'Courier New',monospace;font-size:15px;font-weight:700}
+.level-badge{display:inline-block;background:rgba(255,255,255,0.07);border-radius:4px;padding:2px 7px;font-size:9px;font-weight:700;letter-spacing:1px}
+.level-note{font-size:10px;color:var(--dim);margin-top:2px}
+.level-dist{text-align:right;flex-shrink:0;margin-left:10px}
+.level-dist-val{font-family:'Courier New',monospace;font-size:12px;font-weight:600}
+.level-dist-label{font-size:8px;color:var(--dim)}
+
+/* SIGNAL */
+.signal-card{border-radius:14px;padding:20px 16px;margin-bottom:12px;text-align:center}
+.signal-emoji{font-size:32px;margin-bottom:8px}
+.signal-name{font-family:'Courier New',monospace;font-size:16px;font-weight:800;letter-spacing:1px;margin-bottom:6px}
+.signal-desc{font-size:11px;color:var(--muted);line-height:1.5}
+.signal-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.info-card{background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:10px;padding:12px}
+.info-label{font-size:9px;color:var(--dim);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:5px}
+.info-val{font-family:'Courier New',monospace;font-size:13px;font-weight:700}
+.analysis-box{background:rgba(212,175,55,0.04);border:1px solid rgba(212,175,55,0.15);border-radius:10px;padding:12px;margin-bottom:10px}
+.analysis-label{font-size:9px;color:var(--gold);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px}
+.analysis-text{font-size:12px;color:var(--muted);line-height:1.7}
+
+/* SETUP BOX */
+.setup-box{background:rgba(76,175,80,0.05);border:1px solid rgba(76,175,80,0.25);border-radius:12px;padding:14px;margin-bottom:12px}
+.setup-label{font-size:10px;color:var(--green);font-weight:700;letter-spacing:1px;margin-bottom:10px}
+.setup-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px}
+.setup-item{text-align:center;background:rgba(255,255,255,0.03);border-radius:8px;padding:8px 4px}
+.setup-item-label{font-size:9px;color:var(--dim);text-transform:uppercase;margin-bottom:3px}
+.setup-item-val{font-family:'Courier New',monospace;font-size:13px;font-weight:700}
+.setup-rr{display:flex;gap:16px;padding-top:8px;border-top:1px solid var(--border);font-size:10px;color:var(--dim)}
+.setup-rr span strong{font-weight:700}
+
+/* TAGS */
+.tag{display:inline-block;border-radius:4px;padding:2px 8px;font-size:10px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;white-space:nowrap}
+.tag-green{background:rgba(76,175,80,0.15);color:var(--green);border:1px solid rgba(76,175,80,0.3)}
+.tag-red{background:rgba(239,83,80,0.15);color:var(--red);border:1px solid rgba(239,83,80,0.3)}
+.tag-gold{background:rgba(212,175,55,0.15);color:var(--gold);border:1px solid rgba(212,175,55,0.3)}
+.tag-orange{background:rgba(255,152,0,0.15);color:var(--orange);border:1px solid rgba(255,152,0,0.3)}
+.tag-dim{background:rgba(255,255,255,0.06);color:#888;border:1px solid rgba(255,255,255,0.1)}
+
+/* REFRESH BTN */
+.refresh-btn{width:100%;padding:13px;background:linear-gradient(135deg,var(--gold),#B8962E);border:none;color:#0a0a0c;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer;margin-bottom:10px;letter-spacing:0.5px}
+.refresh-btn:disabled{background:rgba(212,175,55,0.08);border:1px solid rgba(212,175,55,0.3);color:var(--gold);cursor:not-allowed}
+
+/* JOURNAL */
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+.form-group label{display:block;font-size:10px;color:var(--dim);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:4px}
+.form-input{width:100%;background:rgba(255,255,255,0.04);border:1px solid rgba(212,175,55,0.25);border-radius:8px;color:#e0e0e0;padding:9px 11px;font-size:13px;outline:none;font-family:'Courier New',monospace}
+.form-input:focus{border-color:rgba(212,175,55,0.5)}
+.dir-buttons{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.dir-btn{padding:9px;border:none;border-radius:8px;font-weight:700;font-size:12px;cursor:pointer;background:rgba(255,255,255,0.05);color:#555}
+.dir-btn.active-buy{background:var(--green);color:#fff}
+.dir-btn.active-sell{background:var(--red);color:#fff}
+.trade-card{background:rgba(255,255,255,0.02);border-radius:12px;padding:12px 14px;margin-bottom:8px}
+.trade-header{display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+.trade-meta{display:flex;flex-wrap:wrap;gap:10px}
+.trade-field{font-size:10px;color:var(--dim)}
+.trade-field span{color:#e0e0e0;font-family:'Courier New',monospace;font-size:11px;font-weight:600}
+.trade-actions{display:flex;gap:5px}
+.btn-sm{background:none;border:1px solid var(--border);color:var(--dim);border-radius:6px;padding:3px 9px;font-size:10px;cursor:pointer}
+.btn-del{border-color:rgba(239,83,80,0.3);color:var(--red)}
+.save-btn{background:linear-gradient(135deg,var(--gold),#B8962E);border:none;color:#0a0a0c;border-radius:10px;padding:11px 24px;font-size:13px;font-weight:700;cursor:pointer;margin-top:10px}
+.toggle-btn{width:100%;padding:10px;margin-bottom:12px;border:none;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer}
+
+/* SCHEDULE */
+.schedule-item{display:flex;gap:0;margin-bottom:0}
+.schedule-line{display:flex;flex-direction:column;align-items:center;width:26px;flex-shrink:0}
+.schedule-dot{width:9px;height:9px;border-radius:50%;margin-top:17px;z-index:1}
+.schedule-connector{width:1px;flex:1;background:#161618;min-height:16px}
+.schedule-content{flex:1;margin-left:9px;margin-bottom:6px;padding:10px 13px;border-radius:10px}
+
+/* INSIGHT */
+.insight-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.insight-card{background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:12px;padding:12px}
+.insight-emoji{font-size:18px;margin-bottom:6px}
+.insight-title{font-size:11px;font-weight:700;color:#e0e0e0;margin-bottom:4px}
+.insight-text{font-size:10px;color:var(--dim);line-height:1.6}
+
+/* FILTER PILLS */
+.filter-pills{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.pill{background:transparent;border:1px solid var(--border);color:var(--dim);border-radius:20px;padding:4px 12px;font-size:10px;font-weight:600;cursor:pointer}
+.pill.active{background:rgba(212,175,55,0.15);border-color:var(--gold);color:var(--gold)}
+
+/* MISC */
+.no-data{text-align:center;color:var(--dim);padding:40px 0;font-size:13px}
+.spinner{width:16px;height:16px;border:2px solid rgba(212,175,55,0.3);border-top-color:var(--gold);border-radius:50%;animation:spin 0.8s linear infinite;display:inline-block}
+@keyframes spin{to{transform:rotate(360deg)}}
+.warn-box{background:rgba(239,83,80,0.07);border:1px solid rgba(239,83,80,0.25);border-radius:10px;padding:10px 14px;margin-bottom:12px}
+.warn-title{color:var(--red);font-weight:700;font-size:12px;margin-bottom:3px}
+.warn-text{color:var(--muted);font-size:11px}
+.info-box{background:rgba(212,175,55,0.04);border:1px solid rgba(212,175,55,0.15);border-radius:8px;padding:9px 13px;margin-bottom:10px;font-size:11px;color:var(--muted)}
+.sl-warning{color:var(--red);font-size:9px;margin-top:3px}
+.sl-input-warn{border-color:rgba(239,83,80,0.5)!important}
+</style>
+</head>
+<body>
+
+<!-- ── HEADER ── -->
+<div class="header">
+  <div class="header-row">
+    <div class="logo">
+      <div class="logo-dot" id="activeDot"></div>
+      <div>
+        <div class="logo-text">XAU/USD</div>
+        <div id="windowStatus" style="font-size:10px;color:var(--dim);margin-top:1px">Loading...</div>
+      </div>
+    </div>
+    <div>
+      <div class="clock" id="clock">--:--:--</div>
+      <div class="clock-sub" id="clockDate">WIB</div>
+    </div>
+  </div>
+
+  <!-- Daily stats -->
+  <div class="daily-bar" style="margin-bottom:10px">
+    <div class="stat-box" id="tradeCountBox">
+      <div class="stat-label">Trade Hari Ini</div>
+      <div class="stat-val" id="tradeCountVal" style="color:var(--gold)">0/3</div>
+      <div class="stat-sub" id="tradeCountSub"></div>
+    </div>
+    <div class="stat-box" id="dailyPnlBox">
+      <div class="stat-label">P&L Hari Ini</div>
+      <div class="stat-val" id="dailyPnlVal" style="color:var(--muted)">$0.00</div>
+      <div class="stat-sub" id="dailyPnlSub"></div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-label">Win Rate</div>
+      <div class="stat-val" id="wrVal" style="color:var(--red)">0%</div>
+      <div class="stat-sub" id="wrSub">0W/0L</div>
+    </div>
+  </div>
+
+  <!-- Window strip -->
+  <div class="window-strip" id="windowStrip"></div>
+</div>
+
+<!-- ── TABS ── -->
+<div class="tabs">
+  <button class="tab active" onclick="showTab('signal')">📡 Signal</button>
+  <button class="tab" onclick="showTab('levels')">🎯 Levels</button>
+  <button class="tab" onclick="showTab('journal')">📋 Journal</button>
+  <button class="tab" onclick="showTab('plan')">🪟 Plan</button>
+  <button class="tab" onclick="showTab('schedule')">⏰ Jadwal</button>
+</div>
+
+<!-- ── CONTENT ── -->
+<div class="content">
+
+  <!-- ════ SIGNAL TAB ════ -->
+  <div class="tab-panel active" id="tab-signal">
+
+    <!-- Signal card -->
+    <div class="signal-card" id="signalCard" style="background:rgba(212,175,55,0.05);border:1px solid rgba(212,175,55,0.2)">
+      <div class="signal-emoji" id="signalEmoji">⏳</div>
+      <div class="signal-name" id="signalName" style="color:var(--gold)">CHECKING...</div>
+      <div class="signal-desc" id="signalDesc">Fetching live price & analysing conditions</div>
+    </div>
+
+    <!-- Price row -->
+    <div class="signal-grid">
+      <div class="info-card">
+        <div class="info-label">XAU/USD Live</div>
+        <div class="info-val" id="priceDisplay" style="color:#e0e0e0;font-size:20px">—</div>
+        <div id="priceChange" style="font-size:11px;margin-top:4px;font-family:'Courier New',monospace"></div>
+      </div>
+      <div class="info-card">
+        <div class="info-label">Bias Hari Ini</div>
+        <div class="info-val" id="biasBadge" style="font-size:13px">—</div>
+        <div id="biasNote" style="font-size:10px;color:var(--dim);margin-top:4px"></div>
+      </div>
+    </div>
+
+    <!-- Nearest S/R -->
+    <div class="card" id="nearestCard">
+      <div class="card-title" style="color:var(--gold)">Nearest Levels</div>
+      <div id="nearestLevels">
+        <div style="text-align:center;color:var(--dim);font-size:12px;padding:10px 0">Tap Refresh untuk load levels</div>
+      </div>
+    </div>
+
+    <!-- Suggested trade setup -->
+    <div class="setup-box" id="setupBox" style="display:none">
+      <div class="setup-label">✅ SUGGESTED SETUP</div>
+      <div class="setup-grid">
+        <div class="setup-item"><div class="setup-item-label">Entry</div><div class="setup-item-val" id="setupEntry" style="color:#e0e0e0">—</div></div>
+        <div class="setup-item"><div class="setup-item-label">SL</div><div class="setup-item-val" id="setupSL" style="color:var(--red)">—</div></div>
+        <div class="setup-item"><div class="setup-item-label">TP</div><div class="setup-item-val" id="setupTP" style="color:var(--green)">—</div></div>
+      </div>
+      <div class="setup-rr" id="setupRR"></div>
+      <div style="font-size:9px;color:var(--dim);margin-top:8px">⚠️ Konfirmasi 5M candle di MT5 sebelum entry</div>
+    </div>
+
+    <!-- Analysis -->
+    <div class="analysis-box">
+      <div class="analysis-label">Kondisi Market</div>
+      <div class="analysis-text" id="analysisText">Tap Refresh untuk analisa kondisi market saat ini berdasarkan harga live dan rules trading lo.</div>
+    </div>
+
+    <!-- Refresh -->
+    <button class="refresh-btn" id="refreshBtn" onclick="refreshAll()">🔄 Refresh Price & Signal</button>
+    <div id="lastUpdate" style="text-align:center;font-size:10px;color:var(--dim)"></div>
+  </div>
+
+  <!-- ════ LEVELS TAB ════ -->
+  <div class="tab-panel" id="tab-levels">
+
+    <!-- Live price ticker -->
+    <div class="price-card">
+      <div class="price-main">
+        <div>
+          <div class="price-label">XAU/USD LIVE</div>
+          <div class="price-big" id="priceBig">—</div>
+          <div class="price-change" id="priceDelta"></div>
+          <div class="price-meta" id="priceMeta"></div>
+        </div>
+        <button class="update-btn" id="updatePriceBtn" onclick="fetchPrice()">
+          <span id="updateBtnIcon">⚡</span>
+          <span id="updateBtnText">Update Price</span>
+        </button>
+      </div>
+      <div class="range-bar" id="rangeBar" style="display:none">
+        <div class="range-labels">
+          <span class="range-label" id="rangeLow">Low: —</span>
+          <span class="range-label" id="rangeHigh">High: —</span>
+        </div>
+        <div class="range-track">
+          <div class="range-fill" style="width:100%"></div>
+          <div class="range-dot" id="rangeDot"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Anchor note -->
+    <div class="info-box" id="anchorNote" style="display:none">📌 Semua jarak dihitung dari anchor: <strong id="anchorPrice" style="color:var(--gold);font-family:'Courier New',monospace"></strong></div>
+
+    <!-- Resistance -->
+    <div class="card" style="margin-bottom:12px">
+      <div class="card-title" style="color:var(--red)">🔴 RESISTANCE LEVELS</div>
+      <div id="resistanceLevels">
+        <div style="text-align:center;color:var(--dim);font-size:12px;padding:10px 0">Tap Update Price untuk load levels</div>
+      </div>
+    </div>
+
+    <!-- Support -->
+    <div class="card" style="margin-bottom:12px">
+      <div class="card-title" style="color:var(--green)">🟢 SUPPORT LEVELS</div>
+      <div id="supportLevels">
+        <div style="text-align:center;color:var(--dim);font-size:12px;padding:10px 0">Tap Update Price untuk load levels</div>
+      </div>
+    </div>
+
+    <!-- Psychological levels -->
+    <div class="card">
+      <div class="card-title" style="color:var(--purple)">💧 LIQUIDITY / PSYCHOLOGICAL</div>
+      <div id="psychLevels">
+        <div style="text-align:center;color:var(--dim);font-size:12px;padding:10px 0">Tap Update Price untuk load levels</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════ JOURNAL TAB ════ -->
+  <div class="tab-panel" id="tab-journal">
+
+    <!-- Daily warning -->
+    <div id="dailyWarning" style="display:none" class="warn-box">
+      <div class="warn-title" id="dailyWarnTitle">🔴 LIMIT</div>
+      <div class="warn-text" id="dailyWarnText"></div>
+    </div>
+
+    <!-- Toggle form -->
+    <button class="toggle-btn" id="toggleFormBtn" onclick="toggleForm()"
+      style="background:linear-gradient(135deg,var(--gold),#B8962E);color:#0a0a0c">
+      + Log Trade Baru
+    </button>
+
+    <!-- Form -->
+    <div id="tradeForm" style="display:none">
+      <div class="card" style="margin-bottom:14px">
+        <div class="section-title" id="formTitle">📝 Log Trade</div>
+        <div class="form-grid">
+          <div class="form-group"><label>Date</label><input type="date" id="fDate" class="form-input"></div>
+          <div class="form-group"><label>Time (MT)</label><input type="time" id="fTime" class="form-input"></div>
+          <div class="form-group"><label>Entry Price</label><input type="number" id="fEntry" class="form-input" placeholder="5020.00" step="0.01"></div>
+          <div class="form-group"><label>Exit Price</label><input type="number" id="fExit" class="form-input" placeholder="SL atau TP" step="0.01"></div>
+          <div class="form-group">
+            <label>Stop Loss <span style="color:var(--red)">*</span></label>
+            <input type="number" id="fSL" class="form-input" placeholder="Min 15 pips!" step="0.01" oninput="checkSL()">
+            <div class="sl-warning" id="slWarning" style="display:none">⚠️ SL wajib — ingat Jan 12 -$53.94!</div>
+          </div>
+          <div class="form-group"><label>Take Profit</label><input type="number" id="fTP" class="form-input" placeholder="Optional" step="0.01"></div>
+          <div class="form-group"><label>Lot Size</label><input type="number" id="fLot" class="form-input" placeholder="0.01" step="0.01" value="0.01"></div>
+          <div class="form-group">
+            <label>Status</label>
+            <select id="fStatus" class="form-input" onchange="checkSL()">
+              <option>OPEN</option><option>WIN</option><option>LOSS</option><option>BREAKEVEN</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group" style="margin-bottom:10px">
+          <label>Direction</label>
+          <div class="dir-buttons">
+            <button class="dir-btn active-buy" id="buyBtn" onclick="setDir('BUY')">BUY</button>
+            <button class="dir-btn" id="sellBtn" onclick="setDir('SELL')">SELL</button>
+          </div>
+        </div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Session</label>
+            <select id="fSession" class="form-input">
+              <option>Pre-London</option><option>London</option><option>NY</option>
+              <option>Asian</option><option>Late London</option><option>Outside</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Emotion</label>
+            <select id="fEmotion" class="form-input">
+              <option>Calm</option><option>Disciplined</option><option>Confident</option>
+              <option>Anxious</option><option>FOMO</option><option>Greedy</option><option>Fearful</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group" style="margin-bottom:0">
+          <label>Notes</label>
+          <textarea id="fNotes" class="form-input" rows="2" style="resize:vertical;font-family:-apple-system,sans-serif" placeholder="Alasan entry, confluence..."></textarea>
+        </div>
+        <button class="save-btn" onclick="saveTrade()" id="saveBtn">Save Trade</button>
+      </div>
+    </div>
+
+    <!-- Filter -->
+    <div class="filter-pills" id="filterPills">
+      <button class="pill active" onclick="setFilter('ALL')">All</button>
+      <button class="pill" onclick="setFilter('WIN')">WIN</button>
+      <button class="pill" onclick="setFilter('LOSS')">LOSS</button>
+      <button class="pill" onclick="setFilter('OPEN')">OPEN</button>
+      <button class="pill" onclick="setFilter('BREAKEVEN')">BE</button>
+    </div>
+
+    <!-- Trade list -->
+    <div id="tradeList"></div>
+  </div>
+
+  <!-- ════ PLAN TAB ════ -->
+  <div class="tab-panel" id="tab-plan">
+    <!-- Stats overview -->
+    <div class="card" style="background:rgba(92,158,232,0.04);border-color:rgba(92,158,232,0.2)">
+      <div class="section-title" style="color:var(--blue)">📊 Insight 82 Trade (Jan–Mar 2026)</div>
+      <div id="planInsights"></div>
+    </div>
+
+    <!-- Lot calculator -->
+    <div class="card">
+      <div class="section-title">💰 Kalkulator Lot & Risk</div>
+      <div class="form-grid">
+        <div class="form-group"><label>Balance ($)</label><input type="number" id="calcBalance" class="form-input" placeholder="200" oninput="calcLot()"></div>
+        <div class="form-group"><label>SL (pips)</label><input type="number" id="calcSL" class="form-input" placeholder="20" value="20" oninput="calcLot()"></div>
+      </div>
+      <div id="calcResult" style="display:none;background:rgba(76,175,80,0.06);border:1px solid rgba(76,175,80,0.2);border-radius:8px;padding:12px;margin-bottom:12px">
+        <div style="color:var(--green);font-size:11px;font-weight:700;margin-bottom:6px">💡 1% Risk Rule</div>
+        <div id="calcResultText" style="color:var(--muted);font-size:12px;line-height:1.8"></div>
+      </div>
+      <div class="form-grid">
+        <div class="form-group"><label>Lot Dipakai</label><input type="number" id="calcLotUsed" class="form-input" value="0.03" step="0.01" oninput="calcPnL()"></div>
+        <div class="form-group"><label>SL (pips)</label><input type="number" id="calcSLUsed" class="form-input" value="20" oninput="calcPnL()"></div>
+      </div>
+      <div id="pnlResult" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+        <div style="text-align:center;background:rgba(255,255,255,0.02);border-radius:8px;padding:8px"><div style="font-size:9px;color:var(--dim);text-transform:uppercase;margin-bottom:3px">Win ($)</div><div id="pnlWin" style="font-family:'Courier New',monospace;font-size:14px;font-weight:700;color:var(--green)">$4.50</div></div>
+        <div style="text-align:center;background:rgba(255,255,255,0.02);border-radius:8px;padding:8px"><div style="font-size:9px;color:var(--dim);text-transform:uppercase;margin-bottom:3px">Loss ($)</div><div id="pnlLoss" style="font-family:'Courier New',monospace;font-size:14px;font-weight:700;color:var(--red)">-$3.00</div></div>
+        <div style="text-align:center;background:rgba(255,255,255,0.02);border-radius:8px;padding:8px"><div style="font-size:9px;color:var(--dim);text-transform:uppercase;margin-bottom:3px">R:R</div><div id="pnlRR" style="font-family:'Courier New',monospace;font-size:14px;font-weight:700;color:var(--gold)">1:1.5</div></div>
+      </div>
+      <div id="targetInfo" style="margin-top:10px;font-size:11px;color:var(--dim);line-height:1.9"></div>
+    </div>
+
+    <!-- Windows -->
+    <div id="windowCards"></div>
+  </div>
+
+  <!-- ════ SCHEDULE TAB ════ -->
+  <div class="tab-panel" id="tab-schedule">
+    <div class="info-box">📌 MT5 server time diasumsikan GMT (UTC+0). WIB = UTC+7.</div>
+    <div id="scheduleList"></div>
+  </div>
+
+</div>
+
+<!-- ── JAVASCRIPT ── -->
+<script>
+// ─── DATA ───────────────────────────────────────────────────────────────────
+const WINDOWS = [
+  {id:"asian",     emoji:"🌏",name:"Asian",    wib:"09:30–11:00",tier:"D",color:"#9C6FE4",vol:1},
+  {id:"pre_london",emoji:"⭐",name:"Pre-Lon",  wib:"13:00–14:30",tier:"A",color:"#4CAF50",vol:5},
+  {id:"london",    emoji:"🇬🇧",name:"London",  wib:"15:00–16:30",tier:"B",color:"#D4AF37",vol:4},
+  {id:"ny",        emoji:"🗽",name:"NY",       wib:"20:00–21:30",tier:"A",color:"#5C9EE8",vol:5},
+  {id:"late",      emoji:"⚠️",name:"Late",    wib:"22:00–23:00",tier:"D",color:"#FF9800",vol:2},
+];
+
+const SCHEDULE_DATA = [
+  {wib:"06:00",label:"Bangun + Calendar",type:"prep",  desc:"Cek Forex Factory. Tandai news merah. FOMC/NFP/CPI = extra cautious."},
+  {wib:"06:30",label:"Bias Harian",      type:"prep",  desc:"Baca berita gold overnight. Tentukan bias SELL/BUY hari ini."},
+  {wib:"09:30",label:"🌏 Asian (AVOID)",type:"danger", desc:"WR lo hanya ~10–15% di Asian. Skip hampir selalu. Kalau masuk: SL min 20 pips, lot 0.01, max 1 trade."},
+  {wib:"12:00",label:"⚡ Chart Prep",   type:"prime",  desc:"WAJIB buka chart. H4→H1→15M. Mark semua swing high/low dan S/R levels."},
+  {wib:"13:00",label:"⭐ Pre-London",   type:"window", desc:"WINDOW TERBAIK LO. Frankfurt aktif, institutional positioning. WR tertinggi dari data lo. Max 2 trade."},
+  {wib:"15:00",label:"🇬🇧 London Open",type:"window", desc:"Tunggu 15–20 menit. Lihat apakah London break up/down dari Asian range. Entry di pullback."},
+  {wib:"19:30",label:"Pre-NY Prep",     type:"prep",   desc:"Cek US news jam 20:00–21:30. Ada NFP/CPI? Jangan entry 15 menit sebelum."},
+  {wib:"20:00",label:"🗽 NY+COMEX",    type:"window", desc:"Volume tertinggi global. COMEX open 20:30 inject momentum. Follow direction London."},
+  {wib:"22:00",label:"⚠️ Late London", type:"danger", desc:"LAST RESORT ONLY. 3+ losses lo di jam ini. Lot -50%, SL min 20 pips, stop 23:00."},
+  {wib:"23:00",label:"🔴 HARD STOP",   type:"stop",   desc:"Tutup semua posisi. Tidak ada alasan trading setelah ini."},
+  {wib:"23:15",label:"Journal",         type:"close",  desc:"Screenshot + alasan entry + emosi. 5 menit per trade."},
+];
+
+// ─── KEY LEVELS (dari clustering 82 trade entries lo) ────────────────────────
+const BASE_RESISTANCE = [
+  {price:5300, strength:"STRONG", note:"Swing high Jan 28 — rejection kuat area ini"},
+  {price:5200, strength:"STRONG", note:"Cluster resistance Jan 28 & Mar 10 — sering reject"},
+  {price:5175, strength:"MEDIUM", note:"Area konsolidasi Mar 10–11"},
+  {price:5100, strength:"MEDIUM", note:"Support-turned-resistance — banyak bounce di sini"},
+  {price:5060, strength:"WEAK",   note:"Minor resistance, sering tertembus"},
+  {price:5035, strength:"MEDIUM", note:"Cluster Mar 16–17 — failed breakout area"},
+];
+const BASE_SUPPORT = [
+  {price:5000, strength:"STRONG", note:"Psychological level — kunci Mar 2026"},
+  {price:4980, strength:"MEDIUM", note:"Support Feb 10, Mar 16 low area"},
+  {price:4920, strength:"MEDIUM", note:"Cluster Feb 3–5 — demand zone"},
+  {price:4880, strength:"WEAK",   note:"Feb 2 low — minor support"},
+  {price:4820, strength:"MEDIUM", note:"Feb 5–6 congestion area"},
+  {price:4470, strength:"STRONG", note:"Jan 7–9 consolidation zone"},
+  {price:4420, strength:"STRONG", note:"Jan 8 major demand zone — banyak bounce"},
+];
+const PSYCH_LEVELS = [5000,4900,4800,5100,5200,5300,4500,4400];
+
+// ─── SEED TRADES ─────────────────────────────────────────────────────────────
+const SEED_TRADES = [
+  {id:1, date:"2026-01-07",time:"07:31",direction:"SELL",entryPrice:4476.42,exitPrice:4466.03,stopLoss:4476.42,takeProfit:null,lotSize:0.01,status:"WIN",  session:"Pre-London",emotion:"Calm",notes:"+10.39"},
+  {id:2, date:"2026-01-07",time:"11:01",direction:"BUY", entryPrice:4456.04,exitPrice:4466.59,stopLoss:null,   takeProfit:4540,lotSize:0.01,   status:"WIN",  session:"Outside",   emotion:"Calm",notes:"+10.55"},
+  {id:3, date:"2026-01-08",time:"08:00",direction:"BUY", entryPrice:4418.45,exitPrice:4428.58,stopLoss:4415,   takeProfit:null,lotSize:0.01,   status:"WIN",  session:"London",    emotion:"Calm",notes:"+10.13 breakout"},
+  {id:4, date:"2026-01-08",time:"08:10",direction:"SELL",entryPrice:4418.04,exitPrice:4422.11,stopLoss:4422,   takeProfit:null,lotSize:0.01,   status:"LOSS", session:"London",    emotion:"Calm",notes:"Counter-trend"},
+  {id:5, date:"2026-01-08",time:"20:08",direction:"BUY", entryPrice:4417.12,exitPrice:4455.00,stopLoss:4455,   takeProfit:4500,lotSize:0.01,   status:"WIN",  session:"NY",        emotion:"Calm",notes:"BEST +$37.88 — held 6+ hours"},
+  {id:6, date:"2026-01-08",time:"08:18",direction:"SELL",entryPrice:4421.36,exitPrice:4421.36,stopLoss:4421.36,takeProfit:null,lotSize:0.01,   status:"BREAKEVEN",session:"London",emotion:"Calm",notes:""},
+  {id:7, date:"2026-01-09",time:"08:41",direction:"BUY", entryPrice:4464.25,exitPrice:4474.63,stopLoss:4464.25,takeProfit:4500,lotSize:0.01,   status:"WIN",  session:"London",    emotion:"Calm",notes:"+10.38"},
+  {id:8, date:"2026-01-09",time:"15:34",direction:"BUY", entryPrice:4463.17,exitPrice:4482.80,stopLoss:null,   takeProfit:4500,lotSize:0.01,   status:"WIN",  session:"Late London",emotion:"Calm",notes:"+19.63"},
+  {id:9, date:"2026-01-12",time:"02:32",direction:"SELL",entryPrice:4547.24,exitPrice:4574.21,stopLoss:null,   takeProfit:4405,lotSize:0.02,   status:"LOSS", session:"Asian",     emotion:"Calm",notes:"⚠️ NO SL — -$53.94 biggest loss"},
+  {id:10,date:"2026-01-26",time:"03:12",direction:"SELL",entryPrice:5051.01,exitPrice:5054.00,stopLoss:5054,   takeProfit:null,lotSize:0.01,   status:"LOSS", session:"Asian",     emotion:"Calm",notes:"Asian loss"},
+  {id:11,date:"2026-01-27",time:"10:13",direction:"SELL",entryPrice:5100.74,exitPrice:5085.74,stopLoss:5085.74,takeProfit:5060.95,lotSize:0.01,status:"WIN",  session:"Outside",   emotion:"Calm",notes:"+15.00"},
+  {id:12,date:"2026-01-27",time:"12:33",direction:"SELL",entryPrice:5098.57,exitPrice:5083.24,stopLoss:5088.50,takeProfit:5083.24,lotSize:0.01,status:"WIN",  session:"Outside",   emotion:"Calm",notes:"+15.33 — TP hit"},
+  {id:13,date:"2026-01-27",time:"12:46",direction:"BUY", entryPrice:5085.45,exitPrice:5082.00,stopLoss:5082,   takeProfit:null,lotSize:0.01,   status:"LOSS", session:"Outside",   emotion:"Calm",notes:"BUY in downtrend"},
+  {id:14,date:"2026-01-28",time:"07:07",direction:"SELL",entryPrice:5247.04,exitPrice:5252.47,stopLoss:5252,   takeProfit:null,lotSize:0.01,   status:"LOSS", session:"Pre-London",emotion:"FOMO",notes:"SELL into uptrend — FOMO"},
+  {id:15,date:"2026-01-28",time:"07:24",direction:"SELL",entryPrice:5258.50,exitPrice:5260.25,stopLoss:5260,   takeProfit:null,lotSize:0.01,   status:"LOSS", session:"Pre-London",emotion:"FOMO",notes:"2nd FOMO attempt"},
+  {id:16,date:"2026-01-30",time:"08:29",direction:"BUY", entryPrice:5161.28,exitPrice:5157.19,stopLoss:5158.65,takeProfit:5195.17,lotSize:0.01,status:"LOSS", session:"London",    emotion:"Anxious",notes:"BUY in downtrend — 1st"},
+  {id:17,date:"2026-01-30",time:"10:33",direction:"BUY", entryPrice:5113.61,exitPrice:5098.35,stopLoss:5111.02,takeProfit:5173.23,lotSize:0.01,status:"LOSS", session:"Outside",   emotion:"Anxious",notes:"BUY 4th attempt -$15.26"},
+  {id:18,date:"2026-02-03",time:"13:03",direction:"SELL",entryPrice:4917.40,exitPrice:4899.37,stopLoss:4897,   takeProfit:null,lotSize:0.01,   status:"WIN",  session:"NY",        emotion:"Calm",notes:"+18.03"},
+  {id:19,date:"2026-02-03",time:"13:17",direction:"BUY", entryPrice:4903.36,exitPrice:4900.55,stopLoss:null,   takeProfit:null,lotSize:0.01,   status:"LOSS", session:"NY",        emotion:"FOMO",notes:"Counter BUY after win — FOMO"},
+  {id:20,date:"2026-02-03",time:"14:20",direction:"SELL",entryPrice:4932.70,exitPrice:4910.75,stopLoss:4932.75,takeProfit:4715,lotSize:0.01,   status:"WIN",  session:"NY",        emotion:"Disciplined",notes:"+21.95 — best Feb 3"},
+  {id:21,date:"2026-02-04",time:"03:23",direction:"SELL",entryPrice:5038.41,exitPrice:5042.00,stopLoss:5042,   takeProfit:null,lotSize:0.01,   status:"LOSS", session:"Asian",     emotion:"Calm",notes:"Asian loss"},
+  {id:22,date:"2026-02-04",time:"08:06",direction:"BUY", entryPrice:5080.28,exitPrice:5064.44,stopLoss:null,   takeProfit:null,lotSize:0.01,   status:"LOSS", session:"London",    emotion:"FOMO",notes:"⚠️ NO SL — -$15.84"},
+  {id:23,date:"2026-02-05",time:"01:59",direction:"SELL",entryPrice:5022.71,exitPrice:5011.63,stopLoss:5022.70,takeProfit:null,lotSize:0.01,   status:"WIN",  session:"Outside",   emotion:"Calm",notes:"+11.08"},
+  {id:24,date:"2026-02-06",time:"06:03",direction:"SELL",entryPrice:4824.94,exitPrice:4825.07,stopLoss:4825,   takeProfit:null,lotSize:0.01,   status:"LOSS", session:"Pre-London",emotion:"Calm",notes:"SL 0.06 pts — spread loss!"},
+  {id:25,date:"2026-02-09",time:"07:41",direction:"SELL",entryPrice:5032.96,exitPrice:5037.83,stopLoss:5036.61,takeProfit:null,lotSize:0.01,   status:"LOSS", session:"Pre-London",emotion:"Calm",notes:""},
+  {id:26,date:"2026-02-09",time:"07:49",direction:"BUY", entryPrice:5029.96,exitPrice:5024.54,stopLoss:null,   takeProfit:null,lotSize:0.01,   status:"LOSS", session:"Pre-London",emotion:"FOMO",notes:"Immediate counter trade"},
+  {id:27,date:"2026-03-04",time:"02:39",direction:"BUY", entryPrice:5123.11,exitPrice:5123.89,stopLoss:null,   takeProfit:null,lotSize:0.01,   status:"WIN",  session:"Outside",   emotion:"Calm",notes:"+0.78"},
+  {id:28,date:"2026-03-06",time:"15:37",direction:"SELL",entryPrice:5129.66,exitPrice:5126.69,stopLoss:null,   takeProfit:null,lotSize:0.01,   status:"WIN",  session:"Late London",emotion:"Calm",notes:"+2.97"},
+  {id:29,date:"2026-03-09",time:"04:32",direction:"BUY", entryPrice:5079.46,exitPrice:5087.83,stopLoss:null,   takeProfit:5087.83,lotSize:0.01,status:"WIN",  session:"Asian",     emotion:"Calm",notes:"+8.37"},
+  {id:30,date:"2026-03-09",time:"12:55",direction:"SELL",entryPrice:5088.31,exitPrice:5096.62,stopLoss:5096.62,takeProfit:null,lotSize:0.01,   status:"LOSS", session:"NY",        emotion:"Calm",notes:"SELL against bounce"},
+  {id:31,date:"2026-03-10",time:"05:07",direction:"SELL",entryPrice:5172.13,exitPrice:5172.00,stopLoss:5172,   takeProfit:null,lotSize:0.01,   status:"BREAKEVEN",session:"Pre-London",emotion:"Calm",notes:"BE"},
+  {id:32,date:"2026-03-10",time:"05:45",direction:"SELL",entryPrice:5171.46,exitPrice:5163.08,stopLoss:5171,   takeProfit:5141,lotSize:0.01,   status:"WIN",  session:"Pre-London",emotion:"Disciplined",notes:"+8.38 — good SL/TP"},
+  {id:33,date:"2026-03-10",time:"06:22",direction:"BUY", entryPrice:5155.04,exitPrice:5165.75,stopLoss:5154,   takeProfit:null,lotSize:0.01,   status:"WIN",  session:"Pre-London",emotion:"Disciplined",notes:"+10.71 — support bounce"},
+  {id:34,date:"2026-03-10",time:"12:02",direction:"SELL",entryPrice:5190.87,exitPrice:5179.85,stopLoss:5191,   takeProfit:null,lotSize:0.01,   status:"WIN",  session:"NY",        emotion:"Calm",notes:"+11.02"},
+  {id:35,date:"2026-03-10",time:"15:18",direction:"SELL",entryPrice:5204.01,exitPrice:5207.87,stopLoss:5207.43,takeProfit:null,lotSize:0.01,   status:"LOSS", session:"Late London",emotion:"Calm",notes:"SL 3.42 pts — too tight"},
+  {id:36,date:"2026-03-11",time:"16:14",direction:"SELL",entryPrice:5186.51,exitPrice:5190.12,stopLoss:5190,   takeProfit:null,lotSize:0.01,   status:"LOSS", session:"Late London",emotion:"Calm",notes:"SL 3.49 pts — too tight"},
+  {id:37,date:"2026-03-11",time:"21:20",direction:"SELL",entryPrice:5176.61,exitPrice:5176.50,stopLoss:5176.50,takeProfit:5130,lotSize:0.01,   status:"BREAKEVEN",session:"Outside",emotion:"Calm",notes:""},
+  {id:38,date:"2026-03-12",time:"15:21",direction:"SELL",entryPrice:5183.15,exitPrice:5171.79,stopLoss:null,   takeProfit:5171.79,lotSize:0.01,status:"WIN",  session:"Late London",emotion:"Calm",notes:"+11.36"},
+  {id:39,date:"2026-03-12",time:"17:01",direction:"BUY", entryPrice:5142.54,exitPrice:5137.03,stopLoss:5137.03,takeProfit:null,lotSize:0.01,   status:"LOSS", session:"Outside",   emotion:"Calm",notes:"BUY in downtrend"},
+  {id:40,date:"2026-03-13",time:"04:46",direction:"BUY", entryPrice:5118.70,exitPrice:5114.70,stopLoss:5114.70,takeProfit:null,lotSize:0.01,   status:"LOSS", session:"Asian",     emotion:"Calm",notes:"Asian session loss"},
+  {id:41,date:"2026-03-13",time:"13:57",direction:"SELL",entryPrice:5095.11,exitPrice:5101.27,stopLoss:null,   takeProfit:null,lotSize:0.01,   status:"LOSS", session:"NY",        emotion:"Calm",notes:"No SL"},
+  {id:42,date:"2026-03-16",time:"07:23",direction:"SELL",entryPrice:5022.63,exitPrice:5012.60,stopLoss:5022.63,takeProfit:5002,lotSize:0.02,   status:"WIN",  session:"Pre-London",emotion:"Disciplined",notes:"+20.06 — best March"},
+  {id:43,date:"2026-03-16",time:"07:30",direction:"BUY", entryPrice:5010.42,exitPrice:5006.80,stopLoss:5006.80,takeProfit:null,lotSize:0.02,   status:"LOSS", session:"Pre-London",emotion:"Greedy",notes:"⚠️ 7 min after win — revenge BUY"},
+  {id:44,date:"2026-03-16",time:"11:57",direction:"BUY", entryPrice:4983.31,exitPrice:4975.63,stopLoss:4975.63,takeProfit:null,lotSize:0.01,   status:"LOSS", session:"NY",        emotion:"Fearful",notes:"BUY below $5000 — catching knife"},
+  {id:45,date:"2026-03-17",time:"05:53",direction:"SELL",entryPrice:5027.31,exitPrice:5030.06,stopLoss:5030.06,takeProfit:null,lotSize:0.01,   status:"LOSS", session:"Pre-London",emotion:"Calm",notes:"Move already exhausted"},
+  {id:46,date:"2026-03-17",time:"07:16",direction:"SELL",entryPrice:5033.23,exitPrice:5042.98,stopLoss:5042.98,takeProfit:null,lotSize:0.01,   status:"LOSS", session:"Pre-London",emotion:"Anxious",notes:"Late entry after missed move"},
+];
+
+// ─── STATE ───────────────────────────────────────────────────────────────────
+let trades = JSON.parse(localStorage.getItem('xauusd-trades') || 'null') || [...SEED_TRADES];
+let livePrice = null;
+let liveLow = null, liveHigh = null;
+let editingId = null;
+let direction = 'BUY';
+let filterStatus = 'ALL';
+let lastPriceTime = null;
+
+function saveTrades() { localStorage.setItem('xauusd-trades', JSON.stringify(trades)); }
+
+// ─── UTILS ───────────────────────────────────────────────────────────────────
+function getWIB() {
+  return new Date(new Date().toLocaleString("en-US", {timeZone:"Asia/Jakarta"}));
+}
+function wibMins(d) { return d.getHours()*60+d.getMinutes(); }
+function fmtTime(d) { return d.toLocaleTimeString('id-ID', {hour:'2-digit',minute:'2-digit',second:'2-digit'}); }
+function fmtDate(d) { return d.toLocaleDateString('id-ID', {weekday:'short',day:'numeric',month:'short'}); }
+function todayStr() { return getWIB().toISOString().slice(0,10); }
+
+function pnl(t) {
+  if(!t.exitPrice||!t.entryPrice||!t.lotSize) return null;
+  const d = t.direction==='BUY' ? t.exitPrice-t.entryPrice : t.entryPrice-t.exitPrice;
+  return (d*t.lotSize*100).toFixed(2);
+}
+function rrCalc(t) {
+  if(!t.entryPrice||!t.stopLoss||!t.takeProfit) return null;
+  const risk=Math.abs(t.entryPrice-t.stopLoss), reward=Math.abs(t.takeProfit-t.entryPrice);
+  return risk===0?null:(reward/risk).toFixed(2);
+}
+
+// ─── CLOCK ───────────────────────────────────────────────────────────────────
+function tick() {
+  const wib = getWIB();
+  document.getElementById('clock').textContent = fmtTime(wib);
+  document.getElementById('clockDate').textContent = 'WIB · ' + fmtDate(wib);
+  updateWindowStrip(wibMins(wib));
+  updateDailyStats();
+}
+setInterval(tick, 1000);
+
+// ─── WINDOW STRIP ─────────────────────────────────────────────────────────────
+function updateWindowStrip(mins) {
+  const strip = document.getElementById('windowStrip');
+  strip.innerHTML = WINDOWS.map(w => {
+    const [sh,sm] = w.wib.split('–')[0].trim().split(':').map(Number);
+    const [eh,em] = w.wib.split('–')[1].trim().split(':').map(Number);
+    const s=sh*60+sm, e=eh*60+em;
+    const isNow=mins>=s&&mins<e, isPast=mins>=e;
+    const tierColors = {A:'var(--green)',B:'var(--gold)',D:'var(--orange)'};
+    const col = tierColors[w.tier]||'#888';
+    return `<div class="window-item${isNow?' active':''}" style="opacity:${isPast&&!isNow?'0.3':'1'};${isNow?`border-color:${col};background:${col}15`:''}" title="${w.name} ${w.wib} WIB">
+      <div class="window-emoji">${w.emoji}</div>
+      <div class="window-time" style="${isNow?`color:${col}`:''}">${w.wib.split('–')[0].trim()}</div>
+      <div class="window-tier" style="color:${col}">${w.tier}</div>
+    </div>`;
+  }).join('');
+
+  // Window status
+  const activeWin = WINDOWS.find(w => {
+    const[sh,sm]=w.wib.split('–')[0].trim().split(':').map(Number);
+    const[eh,em]=w.wib.split('–')[1].trim().split(':').map(Number);
+    return mins>=sh*60+sm&&mins<eh*60+em;
+  });
+  const dot = document.getElementById('activeDot');
+  const status = document.getElementById('windowStatus');
+  if(activeWin) {
+    const col = {A:'var(--green)',B:'var(--gold)',D:'var(--orange)'}[activeWin.tier]||'#888';
+    dot.style.background=col; dot.style.boxShadow=`0 0 8px ${col}`;
+    status.textContent = `🟢 ${activeWin.emoji} ${activeWin.name} aktif`;
+  } else {
+    dot.style.background='var(--dim)'; dot.style.boxShadow='none';
+    const next = WINDOWS.map(w=>{const[h,m]=w.wib.split('–')[0].trim().split(':').map(Number);return{...w,s:h*60+m};}).find(w=>w.s>mins)||WINDOWS[0];
+    const ns=next.wib.split('–')[0].trim().split(':').map(Number);
+    const untilNext=(ns[0]*60+ns[1])>mins?(ns[0]*60+ns[1])-mins:(24*60-mins)+(ns[0]*60+ns[1]);
+    const h=Math.floor(untilNext/60),m=untilNext%60;
+    status.textContent = `⏸ Next: ${next.emoji} ${next.name} (${h>0?h+'j ':''} ${m}m)`;
+  }
+}
+
+// ─── DAILY STATS ─────────────────────────────────────────────────────────────
+function updateDailyStats() {
+  const today = todayStr();
+  const todayT = trades.filter(t=>t.date===today);
+  const todayClosed = todayT.filter(t=>t.status!=='OPEN');
+  const dailyPnL = todayClosed.reduce((s,t)=>s+(parseFloat(pnl(t))||0),0);
+  const count = todayT.length;
+  const isLimit = count>=3, isLoss = dailyPnL<=-20;
+
+  // Trade count
+  const countBox=document.getElementById('tradeCountBox');
+  document.getElementById('tradeCountVal').textContent=`${count}/3`;
+  document.getElementById('tradeCountVal').style.color=isLimit?'var(--red)':'var(--gold)';
+  document.getElementById('tradeCountSub').textContent=isLimit?'🔴 LIMIT':count>=2?'Hati-hati':'';
+  countBox.style.borderColor=isLimit?'rgba(239,83,80,0.4)':'var(--border)';
+
+  // P&L
+  const pnlBox=document.getElementById('dailyPnlBox');
+  document.getElementById('dailyPnlVal').textContent=`${dailyPnL>=0?'+':''}$${dailyPnL.toFixed(2)}`;
+  document.getElementById('dailyPnlVal').style.color=isLoss?'var(--red)':dailyPnL>0?'var(--green)':'var(--muted)';
+  document.getElementById('dailyPnlSub').textContent=isLoss?'🔴 STOP!':dailyPnL>=30?'🎯 Target!':'';
+  pnlBox.style.borderColor=isLoss?'rgba(239,83,80,0.4)':dailyPnL>0?'rgba(76,175,80,0.4)':'var(--border)';
+
+  // Win rate
+  const closed=trades.filter(t=>t.status!=='OPEN');
+  const wins=closed.filter(t=>t.status==='WIN');
+  const losses=closed.filter(t=>t.status==='LOSS');
+  const wr=closed.length?Math.round(wins.length/closed.length*100):0;
+  document.getElementById('wrVal').textContent=`${wr}%`;
+  document.getElementById('wrVal').style.color=wr>=40?'var(--green)':'var(--red)';
+  document.getElementById('wrSub').textContent=`${wins.length}W/${losses.length}L`;
+
+  // Daily warning
+  const warn=document.getElementById('dailyWarning');
+  if(isLimit||isLoss) {
+    warn.style.display='block';
+    document.getElementById('dailyWarnTitle').textContent=isLoss?'🔴 DAILY LOSS LIMIT':'🔴 MAKSIMAL TRADE TERCAPAI';
+    document.getElementById('dailyWarnText').textContent=isLoss?`P&L hari ini $${dailyPnL.toFixed(2)}. Berhenti trading hari ini.`:`${count}/3 trade sudah masuk. Berhenti untuk hari ini.`;
+  } else { warn.style.display='none'; }
+}
+
+// ─── PRICE FETCH ─────────────────────────────────────────────────────────────
+async function fetchPrice() {
+  const btn=document.getElementById('updatePriceBtn');
+  const icon=document.getElementById('updateBtnIcon');
+  const txt=document.getElementById('updateBtnText');
+  btn.disabled=true; icon.innerHTML='<span class="spinner"></span>'; txt.textContent='Fetching...';
+
+  try {
+    // Try metals.live first
+    const res = await fetch('https://api.metals.live/v1/spot/gold', {signal:AbortSignal.timeout(6000)});
+    if(res.ok) {
+      const data = await res.json();
+      const price = data[0]?.price || data?.price;
+      if(price) {
+        livePrice = parseFloat(price);
+        liveLow = null; liveHigh = null;
+        lastPriceTime = new Date();
+        updatePriceDisplay();
+        renderLevels();
+        btn.disabled=false; icon.textContent='⚡'; txt.textContent='Update Price';
+        return;
+      }
+    }
+  } catch(e){}
+
+  // Fallback: use last known price or show error
+  try {
+    const res2 = await fetch('https://data-asg.goldprice.org/dbXRates/USD', {signal:AbortSignal.timeout(6000)});
+    if(res2.ok) {
+      const d = await res2.json();
+      if(d?.items?.[0]?.xauPrice) {
+        livePrice = parseFloat(d.items[0].xauPrice);
+        lastPriceTime = new Date();
+        updatePriceDisplay();
+        renderLevels();
+        btn.disabled=false; icon.textContent='⚡'; txt.textContent='Update Price';
+        return;
+      }
+    }
+  } catch(e){}
+
+  // If all APIs fail, show message
+  btn.disabled=false; icon.textContent='⚡'; txt.textContent='Retry';
+  document.getElementById('priceBig').textContent='API Error';
+  document.getElementById('priceDelta').innerHTML='<span style="color:var(--orange)">Coba lagi — atau cek koneksi</span>';
+}
+
+function updatePriceDisplay() {
+  if(!livePrice) return;
+  const prev = parseFloat(localStorage.getItem('lastPrice')) || livePrice;
+  const delta = livePrice - prev;
+  localStorage.setItem('lastPrice', livePrice.toString());
+
+  const priceStr = `$${livePrice.toFixed(2)}`;
+  document.getElementById('priceBig').textContent = priceStr;
+  document.getElementById('priceDisplay').textContent = priceStr;
+
+  const deltaStr = `${delta>=0?'+':''}${delta.toFixed(2)}`;
+  const col = delta>=0?'var(--green)':'var(--red)';
+  document.getElementById('priceDelta').innerHTML = `<span style="color:${col}">${deltaStr}</span>`;
+  document.getElementById('priceChange').innerHTML = `<span style="color:${col}">${deltaStr}</span>`;
+
+  if(liveLow&&liveHigh) {
+    const rb=document.getElementById('rangeBar');rb.style.display='block';
+    document.getElementById('rangeLow').textContent=`Low: $${liveLow.toFixed(2)}`;
+    document.getElementById('rangeHigh').textContent=`High: $${liveHigh.toFixed(2)}`;
+    const pct=Math.min(Math.max(((livePrice-liveLow)/(liveHigh-liveLow))*100,2),98);
+    document.getElementById('rangeDot').style.left=pct+'%';
+  }
+
+  if(lastPriceTime) {
+    const timeStr=lastPriceTime.toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'});
+    const meta=document.getElementById('priceMeta');
+    meta.innerHTML=`<span class="tag ${delta>=0?'tag-green':'tag-red'}">${delta>=0?'BULLISH':'BEARISH'}</span><span style="font-size:10px;color:var(--dim);align-self:center">${timeStr} WIB</span>`;
+    const note=document.getElementById('anchorNote');note.style.display='block';
+    document.getElementById('anchorPrice').textContent=livePrice.toFixed(2);
+    document.getElementById('lastUpdate').textContent=`Last update: ${timeStr} WIB`;
+  }
+}
+
+// ─── RENDER LEVELS ────────────────────────────────────────────────────────────
+function renderLevels() {
+  if(!livePrice) return;
+
+  function makeLevel(lvl, type) {
+    const dist = Math.abs(lvl.price - livePrice).toFixed(1);
+    const above = lvl.price > livePrice;
+    const col = type==='resistance'?'var(--red)':'var(--green)';
+    const badgeClass = lvl.strength==='STRONG'?`background:${type==='resistance'?'rgba(239,83,80,0.2)':'rgba(76,175,80,0.2)'};color:${col}`:lvl.strength==='MEDIUM'?'background:rgba(255,152,0,0.15);color:var(--orange)':'background:rgba(255,255,255,0.07);color:#888';
+    return `<div class="level-row">
+      <div>
+        <div style="display:flex;gap:7px;align-items:center;margin-bottom:3px">
+          <span class="level-price" style="color:${col}">$${lvl.price.toFixed(2)}</span>
+          <span class="level-badge" style="${badgeClass}">${lvl.strength}</span>
+        </div>
+        <div class="level-note">${lvl.note}</div>
+      </div>
+      <div class="level-dist">
+        <div class="level-dist-val" style="color:${col}">${above?'+':''}${above?dist:'-'+dist}</div>
+        <div class="level-dist-label">pts dari harga</div>
+      </div>
+    </div>`;
+  }
+
+  // Filter levels based on current price context
+  const res = BASE_RESISTANCE.filter(l=>l.price>livePrice-50).sort((a,b)=>a.price-b.price);
+  const sup = BASE_SUPPORT.filter(l=>l.price<livePrice+50).sort((a,b)=>b.price-a.price);
+
+  document.getElementById('resistanceLevels').innerHTML = res.length
+    ? res.map(l=>makeLevel(l,'resistance')).join('')
+    : '<div style="text-align:center;color:var(--dim);font-size:12px;padding:10px 0">No resistance above current price range</div>';
+
+  document.getElementById('supportLevels').innerHTML = sup.length
+    ? sup.map(l=>makeLevel(l,'support')).join('')
+    : '<div style="text-align:center;color:var(--dim);font-size:12px;padding:10px 0">No support below current price range</div>';
+
+  // Psychological levels
+  const psychNear = PSYCH_LEVELS.filter(p=>Math.abs(p-livePrice)<300).sort((a,b)=>Math.abs(a-livePrice)-Math.abs(b-livePrice));
+  document.getElementById('psychLevels').innerHTML = psychNear.map(p => {
+    const dist=(p-livePrice).toFixed(1);
+    const above=p>livePrice;
+    return `<div class="level-row">
+      <div>
+        <div style="display:flex;gap:7px;align-items:center;margin-bottom:3px">
+          <span class="level-price" style="color:var(--purple)">$${p.toFixed(2)}</span>
+          <span class="level-badge" style="background:rgba(156,111,228,0.15);color:var(--purple)">PSYCHOLOGICAL</span>
+        </div>
+        <div class="level-note">Round number — high liquidity area</div>
+      </div>
+      <div class="level-dist">
+        <div class="level-dist-val" style="color:var(--purple)">${above?'+':''}${dist}</div>
+        <div class="level-dist-label">pts dari harga</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ─── SIGNAL ANALYSIS (rule-based, no AI) ─────────────────────────────────────
+function analyseSignal() {
+  if(!livePrice) return;
+  const wib = getWIB();
+  const mins = wibMins(wib);
+
+  // Check active window
+  const activeWin = WINDOWS.find(w => {
+    const[sh,sm]=w.wib.split('–')[0].trim().split(':').map(Number);
+    const[eh,em]=w.wib.split('–')[1].trim().split(':').map(Number);
+    return mins>=sh*60+sm&&mins<eh*60+em;
+  });
+
+  // Find nearest S/R
+  const resAbove = BASE_RESISTANCE.filter(l=>l.price>livePrice).sort((a,b)=>a.price-b.price);
+  const supBelow = BASE_SUPPORT.filter(l=>l.price<livePrice).sort((a,b)=>b.price-a.price);
+  const nearestR = resAbove[0];
+  const nearestS = supBelow[0];
+
+  // Distance check
+  const distToR = nearestR ? nearestR.price - livePrice : null;
+  const distToS = nearestS ? livePrice - nearestS.price : null;
+
+  // Determine signal
+  let signal, color, emoji, desc, analysis, bias, biasNote;
+
+  const isAvoidWindow = activeWin?.tier === 'D';
+  const isGoodWindow = activeWin && (activeWin.tier==='A'||activeWin.tier==='B');
+  const isOutside = !activeWin;
+  const isAtResistance = distToR && distToR < 20;
+  const isAtSupport = distToS && distToS < 20;
+
+  // Price context
+  if(livePrice > 5200) { bias='SELL'; biasNote='Near major resistance zone'; }
+  else if(livePrice < 4500) { bias='BUY'; biasNote='Near historical support zone'; }
+  else if(livePrice > 5100) { bias='SELL'; biasNote='Above key resistance 5100'; }
+  else if(livePrice < 4900) { bias='BUY'; biasNote='Below key support area'; }
+  else { bias='NEUTRAL'; biasNote='Mid-range — wait for direction'; }
+
+  if(isAvoidWindow) {
+    signal='NO TRADE'; color='var(--red)'; emoji='🔴';
+    desc='Asian/Late London — avoid per trading rules lo';
+    analysis=`Jam ${wib.toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'})} WIB ada di window yang lo hindari (${activeWin.name}). Data lo menunjukkan WR hanya ~10% di jam ini. Tunggu Pre-London jam 13:00 WIB.`;
+  } else if(isOutside) {
+    signal='WAIT'; color='var(--gold)'; emoji='⏳';
+    desc='Di luar trading window — tidak ada session aktif';
+    analysis=`Sekarang di luar semua trading window. Window berikutnya akan aktif sesuai jadwal. Gunakan waktu ini untuk mark levels di H4 dan siapkan bias harian.`;
+  } else if(isAtResistance && bias==='SELL') {
+    signal='SETUP VALID'; color='var(--green)'; emoji='🟢';
+    desc='Price at resistance + SELL bias — cari 5M engulfing!';
+    analysis=`Price ($${livePrice.toFixed(2)}) berada ${distToR?.toFixed(1)} pts dari resistance ${nearestR?.price} (${nearestR?.strength}). Bias SELL sesuai dengan lokasi price. Cari bearish engulfing 5M di level ini untuk konfirmasi entry.`;
+    // Suggest setup
+    if(nearestR) {
+      const entry = nearestR.price - 5;
+      const sl = nearestR.price + 20;
+      const tp = entry - 30;
+      document.getElementById('setupBox').style.display='block';
+      document.getElementById('setupEntry').textContent=`$${entry.toFixed(2)}`;
+      document.getElementById('setupSL').textContent=`$${sl.toFixed(2)}`;
+      document.getElementById('setupTP').textContent=`$${tp.toFixed(2)}`;
+      const slPts=Math.abs(entry-sl).toFixed(1), tpPts=Math.abs(tp-entry).toFixed(1);
+      const rr=(Math.abs(tp-entry)/Math.abs(entry-sl)).toFixed(2);
+      document.getElementById('setupRR').innerHTML=`<span>Risk: <strong style="color:var(--red)">${slPts} pts</strong></span><span>Reward: <strong style="color:var(--green)">${tpPts} pts</strong></span><span>R:R: <strong style="color:var(--gold)">1:${rr}</strong></span>`;
+    }
+  } else if(isAtSupport && bias==='BUY') {
+    signal='SETUP VALID'; color='var(--green)'; emoji='🟢';
+    desc='Price at support + BUY bias — cari 5M engulfing!';
+    analysis=`Price ($${livePrice.toFixed(2)}) berada ${distToS?.toFixed(1)} pts dari support ${nearestS?.price} (${nearestS?.strength}). Bias BUY sesuai dengan lokasi price. Cari bullish engulfing 5M di level ini untuk konfirmasi entry.`;
+  } else if(isGoodWindow) {
+    signal='WATCH'; color='var(--orange)'; emoji='👁️';
+    desc='Window aktif — monitor, tunggu price ke level S/R';
+    analysis=`${activeWin.name} window aktif. Price ($${livePrice.toFixed(2)}) di antara S/R. Nearest resistance: $${nearestR?.price||'—'} (${distToR?.toFixed(0)||'—'} pts). Nearest support: $${nearestS?.price||'—'} (${distToS?.toFixed(0)||'—'} pts). Tunggu price mendekati salah satu level sebelum consider entry.`;
+  } else {
+    signal='WAIT'; color='var(--gold)'; emoji='⏳';
+    desc='Setup belum terbentuk — tunggu kondisi lebih jelas';
+    analysis=`Price ($${livePrice.toFixed(2)}) belum di level S/R yang jelas. Nearest resistance $${nearestR?.price||'—'}, nearest support $${nearestS?.price||'—'}. Tunggu price mendekati level sebelum cari konfirmasi entry.`;
+  }
+
+  // Update signal card
+  const card=document.getElementById('signalCard');
+  card.style.background=`${color}10`; card.style.borderColor=`${color}40`;
+  document.getElementById('signalEmoji').textContent=emoji;
+  document.getElementById('signalName').textContent=signal;
+  document.getElementById('signalName').style.color=color;
+  document.getElementById('signalDesc').textContent=desc;
+  document.getElementById('analysisText').textContent=analysis;
+
+  // Bias
+  const biasColors={SELL:'var(--red)',BUY:'var(--green)',NEUTRAL:'var(--dim)'};
+  document.getElementById('biasBadge').innerHTML=`<span class="tag ${bias==='SELL'?'tag-red':bias==='BUY'?'tag-green':'tag-dim'}">${bias}</span>`;
+  document.getElementById('biasNote').textContent=biasNote;
+
+  // Nearest levels for signal tab
+  let nearHTML='';
+  if(nearestR) nearHTML+=`<div class="level-row"><div><div style="display:flex;gap:6px;align-items:center;margin-bottom:2px"><span style="color:var(--red);font-family:'Courier New',monospace;font-size:14px;font-weight:700">$${nearestR.price}</span><span class="tag tag-red">RESISTANCE</span><span class="tag tag-dim">${nearestR.strength}</span></div><div style="font-size:10px;color:var(--dim)">${nearestR.note}</div></div><div class="level-dist"><div style="color:var(--red);font-family:'Courier New',monospace;font-size:12px;font-weight:600">+${distToR?.toFixed(1)}</div><div style="font-size:8px;color:var(--dim)">pts</div></div></div>`;
+  if(nearestS) nearHTML+=`<div class="level-row"><div><div style="display:flex;gap:6px;align-items:center;margin-bottom:2px"><span style="color:var(--green);font-family:'Courier New',monospace;font-size:14px;font-weight:700">$${nearestS.price}</span><span class="tag tag-green">SUPPORT</span><span class="tag tag-dim">${nearestS.strength}</span></div><div style="font-size:10px;color:var(--dim)">${nearestS.note}</div></div><div class="level-dist"><div style="color:var(--green);font-family:'Courier New',monospace;font-size:12px;font-weight:600">-${distToS?.toFixed(1)}</div><div style="font-size:8px;color:var(--dim)">pts</div></div></div>`;
+  document.getElementById('nearestLevels').innerHTML=nearHTML||'<div style="text-align:center;color:var(--dim);font-size:12px;padding:10px 0">No nearby levels found</div>';
+}
+
+async function refreshAll() {
+  document.getElementById('refreshBtn').disabled=true;
+  document.getElementById('refreshBtn').textContent='🔄 Fetching...';
+  document.getElementById('setupBox').style.display='none';
+  await fetchPrice();
+  analyseSignal();
+  document.getElementById('refreshBtn').disabled=false;
+  document.getElementById('refreshBtn').textContent='🔄 Refresh Price & Signal';
+}
+
+// ─── JOURNAL ─────────────────────────────────────────────────────────────────
+function setDir(d) {
+  direction=d;
+  document.getElementById('buyBtn').className='dir-btn'+(d==='BUY'?' active-buy':'');
+  document.getElementById('sellBtn').className='dir-btn'+(d==='SELL'?' active-sell':'');
+}
+function checkSL() {
+  const sl=document.getElementById('fSL').value;
+  const status=document.getElementById('fStatus').value;
+  const warn=document.getElementById('slWarning');
+  if(!sl&&(status==='WIN'||status==='LOSS')) {
+    warn.style.display='block';
+    document.getElementById('fSL').classList.add('sl-input-warn');
+  } else {
+    warn.style.display='none';
+    document.getElementById('fSL').classList.remove('sl-input-warn');
+  }
+}
+function toggleForm() {
+  const form=document.getElementById('tradeForm');
+  const btn=document.getElementById('toggleFormBtn');
+  const isOpen=form.style.display!=='none';
+  form.style.display=isOpen?'none':'block';
+  if(!isOpen) {
+    btn.style.background='rgba(212,175,55,0.08)';
+    btn.style.border='1px solid rgba(212,175,55,0.3)';
+    btn.style.color='var(--gold)';
+    btn.textContent='✕ Cancel';
+    resetForm();
+  } else {
+    btn.style.background='linear-gradient(135deg,var(--gold),#B8962E)';
+    btn.style.border='none';
+    btn.style.color='#0a0a0c';
+    btn.textContent='+ Log Trade Baru';
+    editingId=null;
+  }
+}
+function resetForm() {
+  const wib=getWIB();
+  document.getElementById('fDate').value=todayStr();
+  document.getElementById('fTime').value='';
+  document.getElementById('fEntry').value='';
+  document.getElementById('fExit').value='';
+  document.getElementById('fSL').value='';
+  document.getElementById('fTP').value='';
+  document.getElementById('fLot').value='0.01';
+  document.getElementById('fStatus').value='OPEN';
+  document.getElementById('fSession').value='Pre-London';
+  document.getElementById('fEmotion').value='Calm';
+  document.getElementById('fNotes').value='';
+  setDir('BUY');
+  document.getElementById('formTitle').textContent='📝 Log Trade';
+  document.getElementById('saveBtn').textContent='Save Trade';
+  editingId=null;
+}
+function saveTrade() {
+  const entry=parseFloat(document.getElementById('fEntry').value);
+  const date=document.getElementById('fDate').value;
+  if(!entry||!date) { alert('Date dan Entry Price wajib diisi!'); return; }
+  const status=document.getElementById('fStatus').value;
+  const sl=document.getElementById('fSL').value;
+  if(!sl&&(status==='WIN'||status==='LOSS')) {
+    if(!confirm('SL tidak diisi! Ingat Jan 12 -$53.94 karena no SL. Lanjut?')) return;
+  }
+  const t = {
+    id: editingId || Date.now(),
+    date, time:document.getElementById('fTime').value,
+    direction, entryPrice:entry,
+    exitPrice:parseFloat(document.getElementById('fExit').value)||null,
+    stopLoss:parseFloat(document.getElementById('fSL').value)||null,
+    takeProfit:parseFloat(document.getElementById('fTP').value)||null,
+    lotSize:parseFloat(document.getElementById('fLot').value)||0.01,
+    status, session:document.getElementById('fSession').value,
+    emotion:document.getElementById('fEmotion').value,
+    notes:document.getElementById('fNotes').value,
+  };
+  if(editingId) { trades=trades.map(x=>x.id===editingId?t:x); }
+  else trades.push(t);
+  saveTrades(); renderTrades(); updateDailyStats(); toggleForm();
+}
+function deleteTrade(id) {
+  if(!confirm('Hapus trade ini?')) return;
+  trades=trades.filter(t=>t.id!==id);
+  saveTrades(); renderTrades(); updateDailyStats();
+}
+function editTrade(id) {
+  const t=trades.find(x=>x.id===id);if(!t)return;
+  if(document.getElementById('tradeForm').style.display==='none') toggleForm();
+  editingId=id;
+  document.getElementById('fDate').value=t.date;
+  document.getElementById('fTime').value=t.time||'';
+  document.getElementById('fEntry').value=t.entryPrice||'';
+  document.getElementById('fExit').value=t.exitPrice||'';
+  document.getElementById('fSL').value=t.stopLoss||'';
+  document.getElementById('fTP').value=t.takeProfit||'';
+  document.getElementById('fLot').value=t.lotSize||0.01;
+  document.getElementById('fStatus').value=t.status||'OPEN';
+  document.getElementById('fSession').value=t.session||'Pre-London';
+  document.getElementById('fEmotion').value=t.emotion||'Calm';
+  document.getElementById('fNotes').value=t.notes||'';
+  setDir(t.direction||'BUY');
+  document.getElementById('formTitle').textContent='✏️ Edit Trade';
+  document.getElementById('saveBtn').textContent='Update Trade';
+}
+function setFilter(f) {
+  filterStatus=f;
+  document.querySelectorAll('.pill').forEach(p=>p.classList.remove('active'));
+  event.target.classList.add('active');
+  renderTrades();
+}
+function renderTrades() {
+  const filtered=trades.filter(t=>filterStatus==='ALL'||t.status===filterStatus);
+  const sorted=[...filtered].sort((a,b)=>b.date.localeCompare(a.date)||(b.time||'').localeCompare(a.time||''));
+  const sc={WIN:'var(--green)',LOSS:'var(--red)',OPEN:'var(--gold)',BREAKEVEN:'var(--dim)'};
+  const list=document.getElementById('tradeList');
+  if(!sorted.length){list.innerHTML=`<div class="no-data">Tidak ada trade di filter ini.</div>`;return;}
+  list.innerHTML=sorted.map(t=>{
+    const p=pnl(t); const r=rrCalc(t);
+    const c=sc[t.status]||'var(--dim)';
+    const dirTag=t.direction==='BUY'?'<span class="tag tag-green">BUY</span>':'<span class="tag tag-red">SELL</span>';
+    const statTag=`<span class="tag" style="background:${c}18;color:${c};border:1px solid ${c}33">${t.status}</span>`;
+    return `<div class="trade-card" style="border:1px solid ${c}22">
+      <div class="trade-header">
+        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">${dirTag}${statTag}<span style="color:var(--dim);font-size:10px">${t.date} ${t.time||''}</span>${t.session?`<span style="color:#2a2a2a;font-size:10px">📍${t.session}</span>`:''}</div>
+        <div class="trade-actions"><button class="btn-sm" onclick="editTrade(${t.id})">Edit</button><button class="btn-sm btn-del" onclick="deleteTrade(${t.id})">Del</button></div>
+      </div>
+      <div class="trade-meta">
+        <div class="trade-field">Entry <span>$${t.entryPrice}</span></div>
+        ${t.stopLoss?`<div class="trade-field">SL <span style="color:var(--red)">$${t.stopLoss}</span></div>`:'<div class="trade-field" style="color:var(--red)">⚠️ No SL</div>'}
+        ${t.takeProfit?`<div class="trade-field">TP <span style="color:var(--green)">$${t.takeProfit}</span></div>`:''}
+        ${t.exitPrice?`<div class="trade-field">Exit <span>$${t.exitPrice}</span></div>`:''}
+        <div class="trade-field">Lots <span>${t.lotSize}</span></div>
+        ${r?`<div class="trade-field">R:R <span style="color:var(--gold)">1:${r}</span></div>`:''}
+        ${p!==null?`<div class="trade-field">P&L <span style="color:${parseFloat(p)>=0?'var(--green)':'var(--red)';font-weight:700}">$${p}</span></div>`:''}
+      </div>
+      ${t.notes?`<div style="margin-top:7px;color:#333;font-size:10px;border-left:2px solid var(--border);padding-left:8px">${t.notes}</div>`:''}
+    </div>`;
+  }).join('');
+}
+
+// ─── PLAN ────────────────────────────────────────────────────────────────────
+function renderPlan() {
+  const closed=trades.filter(t=>t.status!=='OPEN');
+  const wins=closed.filter(t=>t.status==='WIN').length;
+  const losses=closed.filter(t=>t.status==='LOSS').length;
+  const wr=closed.length?Math.round(wins/closed.length*100):0;
+  const totalPnl=closed.reduce((s,t)=>s+(parseFloat(pnl(t))||0),0);
+
+  const insights=[
+    {e:'📉',t:`Real Win Rate: ${wr}% (${wins}W/${losses}L)`,b:`Total P&L dari ${closed.length} trades: $${totalPnl.toFixed(2)}. Butuh R:R minimal 1:2 untuk profitable konsisten.`},
+    {e:'🚫',t:'Asian Session — AVOID (WR ~10%)',b:'Data lo: hampir semua trade Asian = loss. Jan 12 (no SL, Asian) = -$53.94. Feb 4 Asian = dua loss berturut-turut.'},
+    {e:'🔴',t:'NO SL = Bencana',b:'Jan 12 (no SL) = -$53.94. Feb 4 (no SL) = -$15.84. Total losses dari no SL = -$70+ dalam 3 bulan.'},
+    {e:'📈',t:'Best Pattern: Pre-London SELL',b:'Jan 27: +$30. Mar 10: +$30. Mar 16: +$20. Semua hari terbaik = 2–3 trade, searah trend, jam 13:00–14:30 WIB.'},
+    {e:'⚠️',t:'Max 3 Trade Per Hari',b:'Feb 9: 7 trade = net -$19. Feb 6: 5 trade = net -$5. >3 trade/hari hampir selalu net loss.'},
+    {e:'🏆',t:'Best Single Trade',b:'Jan 8 BUY 4417→4455 = +$37.88. Held 6+ jam, follow trend, tidak close terlalu cepat. Blueprint trading terbaik lo.'},
+  ];
+  document.getElementById('planInsights').innerHTML=`<div class="insight-grid">${insights.map(i=>`<div class="insight-card"><div class="insight-emoji">${i.e}</div><div class="insight-title">${i.t}</div><div class="insight-text">${i.b}</div></div>`).join('')}</div>`;
+
+  const WD={
+    asian:{rules:['SL wajib min 20 pips','Max 1 trade, lot 0.01','Skip kalau tidak ada H4 trend jelas','Asian window: WR lo ~10% — ini window terburuk']},
+    pre_london:{rules:['WAJIB monitor jam ini','Mark levels dari H4 sebelum 12:00 WIB','15M trend harus jelas','5M engulfing CLOSE wajib','SL min 15 pips, TP 1.5× SL','Max 2 trade']},
+    london:{rules:['Tunggu 15–20 menit setelah 15:00','London break up atau down dari Asian range?','Entry di pullback setelah direction establish']},
+    ny:{rules:['Cek US news sebelum 20:00 WIB','NFP/CPI: jangan entry 15 menit sebelum','COMEX open 20:30 inject momentum','Follow direction London','Hard stop 22:00 WIB']},
+    late:{rules:['HANYA kalau belum ada trade hari ini','HANYA continuation setup','Lot -50% dari normal','Hard stop 23:30 WIB']},
+  };
+  const tierColors={A:'var(--green)',B:'var(--gold)',C:'var(--purple)',D:'var(--red)'};
+  const tierLabels={A:'PRIMARY',B:'SOLID',C:'COND',D:'AVOID'};
+  document.getElementById('windowCards').innerHTML=WINDOWS.map(w=>{
+    const tc=tierColors[w.tier];
+    const d=WD[w.id]||{};
+    return `<div class="card" style="margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:18px">${w.emoji}</span>
+          <div>
+            <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+              <span style="color:${tc};font-weight:700;font-size:13px">${w.name}</span>
+              <span class="tag" style="background:${tc}18;color:${tc};border:1px solid ${tc}33">${tierLabels[w.tier]}</span>
+            </div>
+            <div style="font-size:10px;color:var(--dim);font-family:'Courier New',monospace;margin-top:2px">${w.wib} WIB</div>
+          </div>
+        </div>
+      </div>
+      ${d.rules?d.rules.map((r,i)=>`<div style="display:flex;gap:8px;margin-bottom:7px"><div style="width:18px;height:18px;border-radius:50%;background:${tc}18;color:${tc};font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">${i+1}</div><span style="color:var(--dim);font-size:11px;line-height:1.5">${r}</span></div>`).join(''):''}
+    </div>`;
+  }).join('');
+
+  calcPnL();
+}
+
+function calcLot() {
+  const b=parseFloat(document.getElementById('calcBalance').value);
+  const s=parseFloat(document.getElementById('calcSL').value)||20;
+  if(!b) { document.getElementById('calcResult').style.display='none'; return; }
+  const risk=b*0.01;
+  const lot=Math.max(0.01,Math.floor(risk/(s*100)/0.01)*0.01);
+  document.getElementById('calcResult').style.display='block';
+  document.getElementById('calcResultText').innerHTML=`Balance: <strong style="color:#e0e0e0">$${b}</strong> · 1% risk: <strong style="color:#e0e0e0">$${risk.toFixed(2)}</strong><br>Recommended lot: <strong style="color:var(--gold);font-family:'Courier New',monospace;font-size:14px">${lot.toFixed(2)}</strong> lots`;
+  document.getElementById('calcLotUsed').value=lot.toFixed(2);
+  calcPnL();
+}
+
+function calcPnL() {
+  const lot=parseFloat(document.getElementById('calcLotUsed').value)||0.03;
+  const sl=parseFloat(document.getElementById('calcSLUsed').value)||20;
+  const tp=(sl*1.5).toFixed(0);
+  const win=(lot*parseFloat(tp)*100).toFixed(2);
+  const loss=(lot*sl*100).toFixed(2);
+  document.getElementById('pnlWin').textContent=`$${win}`;
+  document.getElementById('pnlLoss').textContent=`-$${loss}`;
+  document.getElementById('targetInfo').innerHTML=`Target $30 = <strong style="color:var(--green)">${Math.ceil(30/parseFloat(win))} wins</strong> · Target $50 = <strong style="color:var(--green)">${Math.ceil(50/parseFloat(win))} wins</strong> · Max loss/hari = <strong style="color:var(--red)">$${(parseFloat(loss)*2).toFixed(2)}</strong>`;
+}
+
+// ─── SCHEDULE ─────────────────────────────────────────────────────────────────
+function renderSchedule() {
+  const mins=wibMins(getWIB());
+  const typeColors={prep:'#888',prime:'var(--gold)',window:'var(--green)',danger:'var(--orange)',stop:'var(--red)',close:'var(--dim)'};
+  document.getElementById('scheduleList').innerHTML=SCHEDULE_DATA.map((s,i)=>{
+    const[sh,sm]=s.wib.split(':').map(Number);
+    const sMins=sh*60+sm;
+    const isNow=mins>=sMins&&mins<sMins+90, isPast=mins>sMins+90;
+    const col=typeColors[s.type]||'var(--dim)';
+    return `<div class="schedule-item" style="opacity:${isPast?'0.4':'1'}">
+      <div class="schedule-line">
+        <div class="schedule-dot" style="background:${isNow?col:'#1a1a1a'};border:2px solid ${isNow?col:'#2a2a2a'};box-shadow:${isNow?`0 0 6px ${col}`:'none'}"></div>
+        ${i<SCHEDULE_DATA.length-1?'<div class="schedule-connector"></div>':''}
+      </div>
+      <div class="schedule-content" style="background:${isNow?col+'08':'rgba(255,255,255,0.015)'};border:1px solid ${isNow?col+'25':'#ffffff05'}">
+        <div style="display:flex;align-items:center;gap:7px;margin-bottom:4px;flex-wrap:wrap">
+          <span style="font-family:'Courier New',monospace;color:${isNow?col:'var(--dim)'};font-size:11px;font-weight:600">${s.wib}</span>
+          <span style="color:${isNow?col:'#aaa'};font-size:11px;font-weight:${isNow?'600':'400'}">${s.label}</span>
+          ${isNow?`<span class="tag" style="background:${col}18;color:${col};border:1px solid ${col}33;font-size:8px">SEKARANG</span>`:''}
+        </div>
+        <div style="font-size:11px;color:var(--dim);line-height:1.6">${s.desc}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ─── TABS ─────────────────────────────────────────────────────────────────────
+function showTab(id) {
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('tab-'+id).classList.add('active');
+  event.target.classList.add('active');
+  if(id==='journal') renderTrades();
+  if(id==='plan') renderPlan();
+  if(id==='schedule') renderSchedule();
+  if(id==='levels') renderLevels();
+}
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+tick();
+renderTrades();
+updateDailyStats();
+
+// Auto-fetch price on load
+setTimeout(async()=>{
+  await fetchPrice();
+  analyseSignal();
+}, 500);
+</script>
+</body>
 </html>
